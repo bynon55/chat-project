@@ -7,9 +7,9 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const clients = new Map();
-
 app.use(express.static(path.join(__dirname, 'public')));
+
+const clients = new Map();
 
 wss.on('connection', (ws) => {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -24,7 +24,7 @@ wss.on('connection', (ws) => {
 
       if (data.type === 'setName' && data.name) {
         client.name = data.name.trim().slice(0, 20);
-        broadcast({ type: 'system', text: `🔄 ${client.name} دخل إلى الدردشة` });
+        broadcast({ type: 'system', text: `🔄 دخل ${client.name}` });
         sendUserList();
         return;
       }
