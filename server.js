@@ -1,28 +1,18 @@
-// server.js - نسخة متوافقة مع Deno Deploy (HTTPS)
+// server.js - نسخة متوافقة مع Deno Deploy
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { WebSocketServer } from "https://deno.land/std@0.208.0/ws/mod.ts";
 
-// قائمة العملاء
 const clients = new Map();
 
-// خادوم WebSocket (يعمل على المنفذ الذي يوفره Deno)
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection", (ws) => {
-  const clientId = crypto.randomUUID().slice(0, 6);
-  clients.set(ws, { id: clientId, name: `زائر_${clientId}` });
+  const id = crypto.randomUUID().slice(0, 6);
+  clients.set(ws, { id, name: `زائر_${id}` });
 
-  // إرسال ترحيب
-  ws.send(JSON.stringify({
-    type: "system",
-    text: "👋 أهلاً بك في غرفة الدردشة!"
-  }));
+  ws.send(JSON.stringify({ type: "system", text: "👋 أهلاً بك!" }));
 
-  broadcast({
-    type: "system",
-    text: `🟢 دخل مستخدم جديد`,
-    timestamp: new Date().toISOString()
-  }, ws);
+  broadcast({ type: "system", text: `🟢 دخل مستخدم جديد` }, ws);
 
   ws.on("message", (message) => {
     try {
@@ -30,13 +20,8 @@ wss.on("connection", (ws) => {
       const client = clients.get(ws);
 
       if (data.type === "setName" && data.name) {
-        const oldName = client.name;
         client.name = data.name.trim().slice(0, 20);
-        broadcast({
-          type: "system",
-          text: `🔄 ${oldName} غيّر اسمه إلى ${client.name}`,
-          timestamp: new Date().toISOString()
-        });
+        broadcast({ type: "system", text: `🔄 غيّر اسمه إلى ${client.name}` });
         return;
       }
 
@@ -48,49 +33,37 @@ wss.on("connection", (ws) => {
           timestamp: new Date().toISOString()
         });
       }
-    } catch (_) {
-      // تجاهل الأخطاء
-    }
+    } catch (_) {}
   });
 
   ws.on("close", () => {
     const client = clients.get(ws);
     if (client) {
-      broadcast({
-        type: "system",
-        text: `🔴 غادر ${client.name} الغرفة`,
-        timestamp: new Date().toISOString()
-      });
+      broadcast({ type: "system", text: `🔴 غادر ${client.name}` });
       clients.delete(ws);
     }
   });
 });
 
 function broadcast(data, sender = null) {
-  const message = JSON.stringify(data);
+  const msg = JSON.stringify(data);
   for (const client of wss.clients) {
-    if (client !== sender && client.isOpen) {
-      client.send(message);
-    }
+    if (client !== sender && client.isOpen) client.send(msg);
   }
 }
 
-// خادوم HTTP لخدمة ملف HTML (يعمل مع HTTPS تلقائياً)
 serve(async (req) => {
   const url = new URL(req.url);
-  
   if (url.pathname === "/") {
     try {
-      const html = await Deno.readTextFile("./index.html");
-      return new Response(html, {
+      return new Response(await Deno.readTextFile("./index.html"), {
         headers: { "Content-Type": "text/html; charset=utf-8" }
       });
     } catch {
-      return new Response("ملف index.html غير موجود", { status: 404 });
+      return new Response("index.html غير موجود", { status: 404 });
     }
   }
-  
-  return new Response("404 - الصفحة غير موجودة", { status: 404 });
+  return new Response("404", { status: 404 });
 }, { port: 3000 });
 
-console.log("🚀 خادوم الدردشة يعمل على Deno Deploy");
+console.log("✅ خادوم Deno يعمل!");
