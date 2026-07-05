@@ -1,4 +1,4 @@
-// server.js - نسخة متوافقة مع Deno Deploy
+// server.js - النسخة النهائية المتكاملة
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { WebSocketServer } from "https://deno.land/std@0.208.0/ws/mod.ts";
 
@@ -10,8 +10,8 @@ wss.on("connection", (ws) => {
   const id = crypto.randomUUID().slice(0, 6);
   clients.set(ws, { id, name: `زائر_${id}` });
 
-  ws.send(JSON.stringify({ type: "system", text: "👋 أهلاً بك!" }));
-
+  ws.send(JSON.stringify({ type: "system", text: "👋 أهلاً بك في الدردشة!" }));
+  sendUserList();
   broadcast({ type: "system", text: `🟢 دخل مستخدم جديد` }, ws);
 
   ws.on("message", (message) => {
@@ -22,6 +22,7 @@ wss.on("connection", (ws) => {
       if (data.type === "setName" && data.name) {
         client.name = data.name.trim().slice(0, 20);
         broadcast({ type: "system", text: `🔄 غيّر اسمه إلى ${client.name}` });
+        sendUserList();
         return;
       }
 
@@ -32,6 +33,32 @@ wss.on("connection", (ws) => {
           text: data.text.trim(),
           timestamp: new Date().toISOString()
         });
+        return;
+      }
+
+      if (data.type === "private" && data.to && data.text) {
+        const senderName = client.name;
+        const receiverName = data.to;
+        const text = data.text.trim();
+
+        sendPrivateMessage(receiverName, {
+          type: "private",
+          from: senderName,
+          text: text,
+          timestamp: new Date().toISOString()
+        });
+
+        sendPrivateMessage(senderName, {
+          type: "private",
+          from: senderName,
+          text: text,
+          timestamp: new Date().toISOString()
+        });
+
+        broadcast({
+          type: "system",
+          text: `💬 ${senderName} أرسل رسالة خاصة إلى ${receiverName}`
+        });
       }
     } catch (_) {}
   });
@@ -41,6 +68,7 @@ wss.on("connection", (ws) => {
     if (client) {
       broadcast({ type: "system", text: `🔴 غادر ${client.name}` });
       clients.delete(ws);
+      sendUserList();
     }
   });
 });
@@ -48,7 +76,28 @@ wss.on("connection", (ws) => {
 function broadcast(data, sender = null) {
   const msg = JSON.stringify(data);
   for (const client of wss.clients) {
-    if (client !== sender && client.isOpen) client.send(msg);
+    if (client !== sender && client.isOpen) {
+      client.send(msg);
+    }
+  }
+}
+
+function sendPrivateMessage(targetName, data) {
+  const msg = JSON.stringify(data);
+  for (const [client, info] of clients) {
+    if (info.name === targetName && client.isOpen) {
+      client.send(msg);
+      return true;
+    }
+  }
+  return false;
+}
+
+function sendUserList() {
+  const userList = Array.from(clients.values()).map(c => ({ name: c.name, online: true }));
+  const msg = JSON.stringify({ type: "users", users: userList });
+  for (const client of wss.clients) {
+    if (client.isOpen) client.send(msg);
   }
 }
 
@@ -66,4 +115,4 @@ serve(async (req) => {
   return new Response("404", { status: 404 });
 }, { port: 3000 });
 
-console.log("✅ خادوم Deno يعمل!");
+console.log("✅ خادوم الدردشة يعمل!");
