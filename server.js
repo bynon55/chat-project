@@ -1,57 +1,96 @@
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { WebSocketServer } from "https://deno.land/std@0.208.0/ws/mod.ts";
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+const path = require('path');
 
-const clients = new Map();
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-const wss = new WebSocketServer({ port: 8080 });
+// تخزين العملاء المتصلين
+const clients = new Map(); // ws -> { name }
 
-wss.on("connection", (ws) => {
-  const id = crypto.randomUUID().slice(0, 6);
-  clients.set(ws, { id, name: `زائر` });
+app.use(express.static(path.join(__dirname, 'public')));
 
-  ws.send(JSON.stringify({ type: "system", text: "👋 أهلاً بك!" }));
+wss.on('connection', (ws) => {
+  // إضافة عميل جديد
+  clients.set(ws, { name: 'زائر' });
+  
+  // إرسال قائمة العملاء للجميع
+  broadcastUsers();
 
-  ws.on("message", (message) => {
+  ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       const client = clients.get(ws);
 
-      if (data.type === "setName" && data.name) {
+      // تغيير الاسم
+      if (data.type === 'setName' && data.name) {
         client.name = data.name.trim().slice(0, 20);
+        broadcastUsers();
+        broadcastMessage('system', `🔄 ${client.name} دخل إلى الدردشة`);
         return;
       }
 
-      if (data.type === "message" && data.text) {
-        const msg = JSON.stringify({
-          type: "message",
-          name: client.name,
-          text: data.text.trim(),
-          timestamp: new Date().toISOString()
-        });
-        for (const c of wss.clients) {
-          if (c.isOpen) c.send(msg);
-        }
+      // رسالة عامة
+      if (data.type === 'message' && data.text) {
+        broadcastMessage('public', data.text, client.name);
+        return;
       }
-    } catch (_) {}
+
+      // رسالة خاصة (دردشة فردية)
+      if (data.type === 'private' && data.to && data.text) {
+        sendPrivateMessage(data.to, client.name, data.text);
+        return;
+      }
+    } catch (e) {
+      console.error('خطأ:', e);
+    }
   });
 
-  ws.on("close", () => {
-    clients.delete(ws);
+  ws.on('close', () => {
+    const client = clients.get(ws);
+    if (client) {
+      clients.delete(ws);
+      broadcastUsers();
+      broadcastMessage('system', `🔴 غادر ${client.name}`);
+    }
   });
 });
 
-serve(async (req) => {
-  const url = new URL(req.url);
-  if (url.pathname === "/") {
-    try {
-      return new Response(await Deno.readTextFile("./index.html"), {
-        headers: { "Content-Type": "text/html; charset=utf-8" }
-      });
-    } catch {
-      return new Response("index.html غير موجود", { status: 404 });
-    }
-  }
-  return new Response("404", { status: 404 });
-}, { port: 3000 });
+// دوال مساعدة
+function broadcastUsers() {
+  const userList = Array.from(clients.values()).map(c => c.name);
+  const msg = JSON.stringify({ type: 'users', users: userList });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) client.send(msg);
+  });
+}
 
-console.log("✅ خادوم الدردشة يعمل!");
+function broadcastMessage(type, text, sender = null) {
+  const msg = JSON.stringify({ type, text, sender, timestamp: new Date().toISOString() });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) client.send(msg);
+  });
+}
+
+function sendPrivateMessage(to, from, text) {
+  const msg = JSON.stringify({
+    type: 'private',
+    from,
+    text,
+    timestamp: new Date().toISOString()
+  });
+  
+  wss.clients.forEach((client, ws) => {
+    const clientInfo = clients.get(ws);
+    if (clientInfo && clientInfo.name === to && ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
+  });
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🚀 خادوم الدردشة يعمل على http://localhost:${PORT}`);
+});

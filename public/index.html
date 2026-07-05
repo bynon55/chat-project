@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💬 منصة الدردشة</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+    body { background: #f0f4f8; height: 100vh; display: flex; justify-content: center; align-items: center; }
+    
+    .app { width: 100%; max-width: 500px; height: 100vh; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+    
+    /* تسجيل الدخول */
+    .login { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 40px; }
+    .login h1 { color: #1e293b; font-size: 28px; margin-bottom: 8px; }
+    .login p { color: #94a3b8; margin-bottom: 32px; }
+    .login input { width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 16px; font-size: 16px; text-align: center; }
+    .login input:focus { border-color: #3b82f6; outline: none; }
+    .login button { width: 100%; padding: 16px; background: #3b82f6; color: #fff; border: none; border-radius: 16px; font-size: 18px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+    .login .error { color: #ef4444; font-size: 13px; margin-top: 12px; display: none; }
+    
+    /* شاشة الدردشة */
+    .chat { display: none; flex-direction: column; height: 100%; }
+    .chat.active { display: flex; }
+    
+    /* الهيدر */
+    .header { padding: 14px 18px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { color: #1e293b; font-size: 18px; }
+    .header .dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; }
+    .header .actions { display: flex; gap: 8px; align-items: center; }
+    .header .actions button { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+    .header .user-count { color: #64748b; font-size: 13px; background: #f1f5f9; padding: 4px 12px; border-radius: 30px; }
+    
+    /* الحالة */
+    .status-bar { padding: 4px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; }
+    .status-bar.online { color: #22c55e; }
+    .status-bar.offline { color: #ef4444; }
+    
+    /* الجسم */
+    .body { display: flex; flex: 1; overflow: hidden; position: relative; }
+    
+    /* الرسائل */
+    .messages-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .messages { flex: 1; padding: 12px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; background: #f8fafc; }
+    .msg { padding: 10px 16px; border-radius: 18px; max-width: 88%; word-wrap: break-word; font-size: 14.5px; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .msg.self { background: #3b82f6; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg.other { background: #fff; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e2e8f0; }
+    .msg.system { background: #f1f5f9; color: #94a3b8; align-self: center; text-align: center; font-size: 12px; padding: 5px 18px; border-radius: 30px; }
+    .msg.private { background: #fef3c7; color: #1e293b; align-self: center; text-align: center; font-size: 12px; padding: 5px 18px; border-radius: 30px; border: 1px solid #fcd34d; }
+    .msg .sender { font-size: 11px; font-weight: 600; color: #64748b; display: block; margin-bottom: 2px; }
+    .msg.self .sender { color: rgba(255,255,255,0.7); }
+    .msg .time { font-size: 10px; opacity: .4; margin-right: 6px; }
+    
+    /* الإدخال */
+    .input-area { padding: 10px 16px 14px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+    .input-area input { flex: 1; padding: 12px 18px; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 15px; outline: none; background: #f8fafc; }
+    .input-area input:focus { border-color: #3b82f6; }
+    .input-area button { padding: 12px 22px; background: #3b82f6; color: #fff; border: none; border-radius: 30px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .input-area button:disabled { opacity: .4; }
+    
+    /* القائمة الجانبية (المتصلون) */
+    .sidebar { position: absolute; top: 0; right: 0; bottom: 0; width: 220px; background: #fff; border-left: 1px solid #e2e8f0; transform: translateX(100%); transition: transform .3s ease; z-index: 10; display: flex; flex-direction: column; }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar .header { border-bottom: 1px solid #e2e8f0; padding: 12px 16px; }
+    .sidebar .header h3 { color: #1e293b; font-size: 16px; }
+    .sidebar .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
+    .sidebar .users-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .sidebar .user-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: .2s; }
+    .sidebar .user-item:hover { background: #f8fafc; }
+    .sidebar .user-item .avatar { width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+    .sidebar .user-item .name { color: #1e293b; font-size: 14px; font-weight: 500; }
+    .sidebar .user-item .badge { background: #3b82f6; color: #fff; font-size: 10px; padding: 2px 10px; border-radius: 30px; margin-right: auto; }
+    
+    /* نافذة الدردشة الفردية */
+    .private-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fff; z-index: 20; flex-direction: column; }
+    .private-overlay.open { display: flex; }
+    .private-overlay .header { border-bottom: 1px solid #e2e8f0; }
+    .private-overlay .header .back-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+    .private-messages { flex: 1; padding: 12px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; background: #f8fafc; }
+    .private-input { padding: 10px 16px 14px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+    .private-input input { flex: 1; padding: 12px 18px; border: 2px solid #e2e8f0; border-radius: 30px; font-size: 15px; outline: none; background: #f8fafc; }
+    .private-input button { padding: 12px 22px; background: #3b82f6; color: #fff; border: none; border-radius: 30px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    
+    /* الإعدادات */
+    .settings-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.3); backdrop-filter: blur(4px); z-index: 100; justify-content: center; align-items: center; padding: 24px; }
+    .settings-overlay.open { display: flex; }
+    .settings-panel { background: #fff; border-radius: 28px; padding: 32px 28px; width: 100%; max-width: 380px; }
+    .settings-panel h2 { text-align: center; color: #1e293b; margin-bottom: 20px; }
+    .settings-panel input { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 14px; font-size: 16px; outline: none; background: #f8fafc; }
+    .settings-panel .current-name { text-align: center; color: #94a3b8; font-size: 13px; margin-top: 12px; }
+    .settings-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .settings-actions button { flex: 1; padding: 14px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .settings-actions .save { background: #3b82f6; color: #fff; }
+    .settings-actions .close { background: #f1f5f9; color: #64748b; }
+    
+    /* التبويبات */
+    .tabs { display: flex; border-top: 1px solid #e2e8f0; background: #fff; }
+    .tab { flex: 1; padding: 8px 0; text-align: center; color: #94a3b8; font-size: 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+    .tab .icon { display: block; font-size: 18px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- تسجيل الدخول -->
+  <div class="login" id="login">
+    <div style="font-size:64px;margin-bottom:16px">💬</div>
+    <h1>مرحباً بك</h1>
+    <p>أدخل اسمك للانضمام إلى الدردشة</p>
+    <input type="text" id="loginName" placeholder="اكتب اسمك..." maxlength="20">
+    <button id="loginBtn">دخول</button>
+    <div class="error" id="loginError">الرجاء إدخال اسم صحيح</div>
+  </div>
+
+  <!-- شاشة الدردشة -->
+  <div class="chat" id="chat">
+    <div class="header">
+      <h1>💬 دردشة <span class="dot"></span></h1>
+      <div class="actions">
+        <span class="user-count" id="userCount">0 متصل</span>
+        <button id="settingsToggle">⚙️</button>
+        <button id="sidebarToggle">👥</button>
+      </div>
+    </div>
+    <div class="status-bar" id="statusText">🔄 جاري الاتصال...</div>
+    
+    <div class="body">
+      <div class="messages-area">
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+          <input type="text" id="msgInput" placeholder="اكتب رسالتك..." maxlength="500">
+          <button id="sendBtn">إرسال</button>
+        </div>
+      </div>
+      
+      <!-- القائمة الجانبية -->
+      <div class="sidebar" id="sidebar">
+        <div class="header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h3>👥 المتصلون</h3>
+          <button class="close-btn" id="closeSidebar">✕</button>
+        </div>
+        <div class="users-list" id="usersList"></div>
+      </div>
+      
+      <!-- نافذة الدردشة الفردية -->
+      <div class="private-overlay" id="privateOverlay">
+        <div class="header" style="display:flex;align-items:center;gap:12px;">
+          <button class="back-btn" id="closePrivate">←</button>
+          <span id="privateTitle" style="flex:1;font-weight:600;">دردشة خاصة</span>
+        </div>
+        <div class="private-messages" id="privateMessages"></div>
+        <div class="private-input">
+          <input type="text" id="privateMsgInput" placeholder="رسالة خاصة...">
+          <button id="privateSendBtn">إرسال</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active"><span class="icon">💬</span>الرسائل</div>
+      <div class="tab" id="tabUsers"><span class="icon">👥</span>المتصلون</div>
+      <div class="tab"><span class="icon">🏠</span>الغرفة</div>
+    </div>
+  </div>
+
+  <!-- الإعدادات -->
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-panel">
+      <h2>⚙️ الإعدادات</h2>
+      <input type="text" id="settingsName" placeholder="الاسم الجديد...">
+      <div class="current-name" id="currentNameDisplay">الاسم الحالي: زائر</div>
+      <div class="settings-actions">
+        <button class="save" id="settingsSave">حفظ</button>
+        <button class="close" id="settingsClose">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// الكود الرئيسي - مع قائمة جانبية ودردشة خاصة
+// =============================================
+
+// ===== العناصر =====
+const login = document.getElementById('login');
+const chat = document.getElementById('chat');
+const loginName = document.getElementById('loginName');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+const messages = document.getElementById('messages');
+const msgInput = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+const statusText = document.getElementById('statusText');
+const userCount = document.getElementById('userCount');
+const sidebar = document.getElementById('sidebar');
+const usersList = document.getElementById('usersList');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const closeSidebar = document.getElementById('closeSidebar');
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsOverlay = document.getElementById('settingsOverlay');
+const settingsName = document.getElementById('settingsName');
+const settingsSave = document.getElementById('settingsSave');
+const settingsClose = document.getElementById('settingsClose');
+const currentNameDisplay = document.getElementById('currentNameDisplay');
+const privateOverlay = document.getElementById('privateOverlay');
+const privateMessages = document.getElementById('privateMessages');
+const privateMsgInput = document.getElementById('privateMsgInput');
+const privateSendBtn = document.getElementById('privateSendBtn');
+const privateTitle = document.getElementById('privateTitle');
+const closePrivate = document.getElementById('closePrivate');
+const tabUsers = document.getElementById('tabUsers');
+
+// ===== متغيرات =====
+let ws = null;
+let myName = '';
+let users = [];
+let privateWith = null;
+let privateCache = {};
+
+// ===== تسجيل الدخول =====
+loginBtn.onclick = () => {
+  const name = loginName.value.trim();
+  if (!name || name.length < 2) { loginError.style.display = 'block'; return; }
+  loginError.style.display = 'none';
+  myName = name;
+  login.style.display = 'none';
+  chat.classList.add('active');
+  currentNameDisplay.textContent = `الاسم الحالي: ${myName}`;
+  connect();
+};
+loginName.onkeydown = (e) => { if (e.key === 'Enter') loginBtn.click(); };
+
+// ===== الاتصال =====
+function connect() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${location.host}`);
+  
+  ws.onopen = () => {
+    statusText.textContent = '✅ متصل';
+    statusText.className = 'status-bar online';
+    sendBtn.disabled = false;
+    ws.send(JSON.stringify({ type: 'setName', name: myName }));
+  };
+  
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      handleMessage(data);
+    } catch (_) {}
+  };
+  
+  ws.onclose = () => {
+    statusText.textContent = '❌ غير متصل';
+    statusText.className = 'status-bar offline';
+    sendBtn.disabled = true;
+    setTimeout(connect, 3000);
+  };
+  
+  ws.onerror = () => { ws.close(); };
+}
+
+// ===== معالجة الرسائل =====
+function handleMessage(data) {
+  if (data.type === 'system') {
+    addMessage(data.text, 'system');
+  } else if (data.type === 'public') {
+    addMessage(data.text, data.sender === myName ? 'self' : 'other', data.sender, data.timestamp);
+  } else if (data.type === 'users') {
+    users = data.users.filter(u => u !== myName);
+    updateUsersList();
+    userCount.textContent = `${users.length} متصل`;
+  } else if (data.type === 'private') {
+    if (data.from === privateWith || data.from === myName) {
+      addPrivateMessage(data.from, data.text, data.timestamp);
+    }
+    addMessage(`💬 رسالة خاصة من ${data.from}`, 'private');
+  }
+}
+
+// ===== إضافة رسالة عامة =====
+function addMessage(text, type, sender, timestamp) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  const time = timestamp ? new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+  
+  if (type === 'system') {
+    div.classList.add('system');
+    div.textContent = text;
+  } else if (type === 'private') {
+    div.classList.add('private');
+    div.textContent = text;
+  } else {
+    div.classList.add(type);
+    div.innerHTML = `<span class="sender">${sender}</span>${text}<span class="time">${time}</span>`;
+  }
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ===== إضافة رسالة خاصة =====
+function addPrivateMessage(sender, text, timestamp) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  const time = timestamp ? new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+  const isSelf = sender === myName;
+  div.classList.add(isSelf ? 'self' : 'other');
+  div.innerHTML = `<span class="sender">${isSelf ? 'أنت' : sender}</span>${text}<span class="time">${time}</span>`;
+  privateMessages.appendChild(div);
+  privateMessages.scrollTop = privateMessages.scrollHeight;
+}
+
+// ===== تحديث قائمة المستخدمين =====
+function updateUsersList() {
+  usersList.innerHTML = '';
+  if (users.length === 0) {
+    usersList.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">لا يوجد مستخدمون</div>';
+    return;
+  }
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-item';
+    const initial = user.charAt(0).toUpperCase();
+    div.innerHTML = `
+      <div class="avatar" style="background:#3b82f6">${initial}</div>
+      <span class="name">${user}</span>
+      <span class="badge">خاص</span>
+    `;
+    div.onclick = () => openPrivateChat(user);
+    usersList.appendChild(div);
+  });
+}
+
+// ===== فتح الدردشة الفردية =====
+function openPrivateChat(user) {
+  privateWith = user;
+  privateTitle.textContent = `💬 دردشة مع ${user}`;
+  privateMessages.innerHTML = '';
+  if (privateCache[user]) {
+    privateCache[user].forEach(msg => addPrivateMessage(msg.from, msg.text, msg.timestamp));
+  }
+  privateOverlay.classList.add('open');
+  sidebar.classList.remove('open');
+  privateMsgInput.focus();
+}
+
+// ===== إغلاق الدردشة الفردية =====
+closePrivate.onclick = () => {
+  privateOverlay.classList.remove('open');
+  privateWith = null;
+};
+
+// ===== إرسال رسالة خاصة =====
+function sendPrivate() {
+  const text = privateMsgInput.value.trim();
+  if (!text || !privateWith) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'private', to: privateWith, text }));
+    if (!privateCache[privateWith]) privateCache[privateWith] = [];
+    privateCache[privateWith].push({ from: myName, text, timestamp: new Date().toISOString() });
+    addPrivateMessage(myName, text);
+    privateMsgInput.value = '';
+  }
+}
+privateSendBtn.onclick = sendPrivate;
+privateMsgInput.onkeydown = (e) => { if (e.key === 'Enter') sendPrivate(); };
+
+// ===== إرسال رسالة عامة =====
+function sendMessage() {
+  const text = msgInput.value.trim();
+  if (!text) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'message', text }));
+    msgInput.value = '';
+    msgInput.focus();
+  }
+}
+sendBtn.onclick = sendMessage;
+msgInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
+
+// ===== فتح/إغلاق القائمة الجانبية =====
+sidebarToggle.onclick = () => { sidebar.classList.toggle('open'); };
+closeSidebar.onclick = () => { sidebar.classList.remove('open'); };
+tabUsers.onclick = () => { sidebar.classList.toggle('open'); };
+
+// ===== الإعدادات =====
+settingsToggle.onclick = () => {
+  settingsOverlay.classList.add('open');
+  settingsName.value = '';
+  settingsName.focus();
+};
+settingsClose.onclick = () => { settingsOverlay.classList.remove('open'); };
+settingsSave.onclick = () => {
+  const newName = settingsName.value.trim();
+  if (!newName || newName === myName) { settingsClose.click(); return; }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'setName', name: newName }));
+    myName = newName;
+    currentNameDisplay.textContent = `الاسم الحالي: ${myName}`;
+    settingsName.value = '';
+    settingsClose.click();
+  }
+};
+settingsName.onkeydown = (e) => { if (e.key === 'Enter') settingsSave.click(); };
+settingsOverlay.onclick = (e) => { if (e.target === settingsOverlay) settingsClose.click(); };
+</script>
+</body>
+</html>
