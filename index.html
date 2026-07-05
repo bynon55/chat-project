@@ -3,199 +3,737 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💬 دردشة خفيفة</title>
+  <title>💬 منصة الدردشة المتكاملة</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    /* ===== الإعدادات العامة ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    
     body {
-      background: #0f0c29;
+      background: #0a0a1a;
       height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 10px;
+      padding: 12px;
     }
-    .chat {
+    
+    /* ===== التطبيق الرئيسي ===== */
+    .app {
       width: 100%;
-      max-width: 500px;
-      background: rgba(255,255,255,0.07);
-      backdrop-filter: blur(20px);
-      border-radius: 28px;
-      border: 1px solid rgba(255,255,255,0.1);
-      height: 90vh;
-      max-height: 680px;
+      max-width: 480px;
+      height: 95vh;
+      max-height: 850px;
+      background: linear-gradient(145deg, #14142a, #1a1a35);
+      border-radius: 32px;
+      border: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+      position: relative;
+    }
+    
+    /* ===== الهيدر ===== */
+    .header {
+      padding: 16px 20px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .header-title h1 {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .header-title .online-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    .header-users {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      background: rgba(167,139,250,0.08);
+      padding: 5px 14px;
+      border-radius: 30px;
+    }
+    
+    .header-users span {
+      color: #a78bfa;
+      font-weight: 700;
+    }
+    
+    /* ===== الحالة ===== */
+    .status-bar {
+      padding: 6px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    
+    .status-bar .status-icon {
+      font-size: 14px;
+    }
+    
+    .status-bar .status-text {
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+    }
+    
+    .status-bar .status-text.online {
+      color: #4ade80;
+    }
+    
+    .status-bar .status-text.offline {
+      color: #f87171;
+    }
+    
+    /* ===== الجسم (قائمة المستخدمين + الرسائل) ===== */
+    .body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* ===== قائمة المستخدمين (جانبية) ===== */
+    .users-sidebar {
+      width: 0;
+      background: rgba(255,255,255,0.02);
+      border-left: 1px solid rgba(255,255,255,0.04);
+      overflow: hidden;
+      transition: width 0.3s ease;
+      flex-shrink: 0;
+    }
+    
+    .users-sidebar.open {
+      width: 130px;
+    }
+    
+    .users-sidebar .sidebar-header {
+      padding: 12px 14px;
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    
+    .users-sidebar .user-item {
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      transition: 0.2s;
+    }
+    
+    .users-sidebar .user-item:hover {
+      background: rgba(167,139,250,0.05);
+    }
+    
+    .users-sidebar .user-item .user-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .users-sidebar .user-item .user-dot.online {
+      background: #4ade80;
+    }
+    
+    .users-sidebar .user-item .user-dot.idle {
+      background: #fbbf24;
+    }
+    
+    /* ===== منطقة الرسائل ===== */
+    .messages-area {
+      flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
-    .header {
-      padding: 18px 22px;
-      background: rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .header h1 { color: #fff; font-size: 18px; }
-    .header span { color: #a78bfa; font-size: 12px; background: rgba(167,139,250,0.15); padding: 4px 14px; border-radius: 30px; }
-    .msgs {
+    
+    .messages {
       flex: 1;
-      padding: 16px;
+      padding: 12px 16px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
-    .msgs::-webkit-scrollbar { width: 4px; }
-    .msgs::-webkit-scrollbar-thumb { background: #6b5b9e; border-radius: 10px; }
+    
+    .messages::-webkit-scrollbar {
+      width: 3px;
+    }
+    
+    .messages::-webkit-scrollbar-thumb {
+      background: rgba(167,139,250,0.2);
+      border-radius: 10px;
+    }
+    
+    /* ===== الرسائل ===== */
     .msg {
       padding: 8px 14px;
       border-radius: 16px;
-      max-width: 85%;
+      max-width: 88%;
       word-wrap: break-word;
       font-size: 14px;
-      line-height: 1.4;
+      line-height: 1.5;
       animation: fadeIn 0.2s ease;
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    .msg.self { background: #7c3aed; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-    .msg.other { background: rgba(255,255,255,0.08); color: #e5e7eb; align-self: flex-start; border-bottom-left-radius: 4px; }
-    .msg.system { background: rgba(167,139,250,0.1); color: #c4b5fd; align-self: center; text-align: center; font-size: 12px; padding: 4px 16px; border-radius: 30px; max-width: 95%; }
-    .msg .name { font-size: 11px; font-weight: 600; color: #a78bfa; display: block; margin-bottom: 2px; }
-    .msg .time { font-size: 9px; opacity: 0.4; margin-right: 6px; }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .msg-self {
+      background: linear-gradient(135deg, #6d28d9, #7c3aed);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .msg-other {
+      background: rgba(255,255,255,0.06);
+      color: #e5e7eb;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    
+    .msg-system {
+      background: rgba(167,139,250,0.06);
+      color: #a78bfa;
+      align-self: center;
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 16px;
+      border-radius: 30px;
+      max-width: 95%;
+    }
+    
+    .msg-error {
+      background: rgba(244,63,94,0.12);
+      color: #f87171;
+      align-self: center;
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 16px;
+      border-radius: 30px;
+      max-width: 95%;
+    }
+    
+    .msg .sender {
+      font-size: 11px;
+      font-weight: 600;
+      color: #a78bfa;
+      display: block;
+      margin-bottom: 2px;
+    }
+    
+    .msg .time {
+      font-size: 9px;
+      opacity: 0.3;
+      margin-right: 6px;
+    }
+    
+    .msg-self .sender {
+      color: rgba(255,255,255,0.6);
+    }
+    
+    /* ===== منطقة الكتابة ===== */
     .input-area {
-      padding: 12px 16px 16px;
-      background: rgba(255,255,255,0.03);
-      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 16px 14px;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.04);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
+      flex-shrink: 0;
     }
-    .row { display: flex; gap: 8px; }
-    .row input {
+    
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .input-row input {
       flex: 1;
-      padding: 10px 16px;
+      padding: 11px 18px;
       border: none;
       border-radius: 30px;
-      background: rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.06);
       color: #fff;
       font-size: 14px;
       outline: none;
+      transition: 0.2s;
     }
-    .row input::placeholder { color: rgba(255,255,255,0.3); }
-    .row input:focus { background: rgba(255,255,255,0.12); }
-    .row button {
-      padding: 10px 20px;
+    
+    .input-row input:focus {
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 0 0 2px rgba(167,139,250,0.15);
+    }
+    
+    .input-row input::placeholder {
+      color: rgba(255,255,255,0.25);
+    }
+    
+    .input-row button {
+      padding: 11px 22px;
       border: none;
       border-radius: 30px;
-      background: #7c3aed;
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
       color: #fff;
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
+      transition: 0.2s;
+      white-space: nowrap;
     }
-    .row button:hover { opacity: 0.9; }
-    .row button:active { transform: scale(0.96); }
-    .name-row { display: flex; gap: 8px; align-items: center; }
-    .name-row label { color: rgba(255,255,255,0.4); font-size: 12px; }
+    
+    .input-row button:hover {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+    
+    .input-row button:active {
+      transform: scale(0.96);
+    }
+    
+    .input-row button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .name-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .name-row label {
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+    }
+    
     .name-row input {
       flex: 1;
-      padding: 6px 12px;
+      padding: 6px 14px;
       border: none;
       border-radius: 30px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       color: #fff;
       font-size: 12px;
       outline: none;
     }
-    .name-row button { padding: 6px 14px; font-size: 11px; background: rgba(167,139,250,0.2); color: #a78bfa; border: none; border-radius: 30px; cursor: pointer; }
-    .status { color: rgba(255,255,255,0.25); font-size: 11px; text-align: center; padding: 2px 0; }
+    
+    .name-row input:focus {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .name-row input::placeholder {
+      color: rgba(255,255,255,0.2);
+    }
+    
+    .name-row button {
+      padding: 5px 14px;
+      font-size: 11px;
+      background: rgba(167,139,250,0.1);
+      color: #a78bfa;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    
+    .name-row button:hover {
+      background: rgba(167,139,250,0.2);
+    }
+    
+    /* ===== التبويبات السفلية ===== */
+    .tabs {
+      display: flex;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+      flex-shrink: 0;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    
+    .tab:hover {
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .tab.active {
+      color: #a78bfa;
+      border-bottom-color: #a78bfa;
+    }
+    
+    .tab .tab-icon {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+    
+    /* ===== زر فتح قائمة المستخدمين ===== */
+    .toggle-users {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.4);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: 0.2s;
+    }
+    
+    .toggle-users:hover {
+      color: #a78bfa;
+    }
+    
+    /* ===== استجابة للشاشات الصغيرة ===== */
+    @media (max-width: 480px) {
+      .app {
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+        border: none;
+      }
+      
+      .users-sidebar.open {
+        width: 110px;
+      }
+    }
   </style>
 </head>
 <body>
-<div class="chat">
-  <div class="header"><h1>💬 دردشة</h1><span>🟢 مباشر</span></div>
-  <div class="msgs" id="msgs"></div>
-  <div class="input-area">
-    <div class="name-row">
-      <label>👤</label>
-      <input id="nameInput" placeholder="اسمك" maxlength="20" />
-      <button id="nameBtn">تغيير</button>
+
+<div class="app">
+  
+  <!-- ===== الهيدر ===== -->
+  <div class="header">
+    <div class="header-title">
+      <h1>💬 دردشة</h1>
+      <span class="online-dot"></span>
     </div>
-    <div class="row">
-      <input id="msgInput" placeholder="اكتب رسالتك..." />
-      <button id="sendBtn">إرسال</button>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <button class="toggle-users" id="toggleUsers">👥</button>
+      <div class="header-users">
+        <span id="userCount">0</span> متصل
+      </div>
     </div>
-    <div class="status" id="status">🔄 جاري الاتصال...</div>
   </div>
+  
+  <!-- ===== شريط الحالة ===== -->
+  <div class="status-bar">
+    <span class="status-icon" id="statusIcon">🔄</span>
+    <span class="status-text" id="statusText">جاري الاتصال...</span>
+  </div>
+  
+  <!-- ===== الجسم ===== -->
+  <div class="body">
+    <!-- قائمة المستخدمين -->
+    <div class="users-sidebar" id="usersSidebar">
+      <div class="sidebar-header">📋 المتصلون</div>
+      <div id="usersList"></div>
+    </div>
+    
+    <!-- منطقة الرسائل -->
+    <div class="messages-area">
+      <div class="messages" id="messages"></div>
+      
+      <!-- منطقة الكتابة -->
+      <div class="input-area">
+        <div class="name-row">
+          <label>👤</label>
+          <input type="text" id="nameInput" placeholder="اسمك..." maxlength="20" />
+          <button id="nameBtn">تغيير</button>
+        </div>
+        
+        <div class="input-row">
+          <input type="text" id="msgInput" placeholder="اكتب في الغرفة..." maxlength="500" />
+          <button id="sendBtn">إرسال</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- ===== التبويبات السفلية ===== -->
+  <div class="tabs">
+    <div class="tab active" data-tab="messages">
+      <span class="tab-icon">💬</span>
+      الرسائل
+    </div>
+    <div class="tab" data-tab="friends">
+      <span class="tab-icon">👥</span>
+      الأصدقاء
+    </div>
+    <div class="tab" data-tab="room">
+      <span class="tab-icon">🏠</span>
+      الغرفة
+    </div>
+  </div>
+  
 </div>
+
 <script>
-const msgs = document.getElementById('msgs');
+// =============================================
+// كود العميل المتكامل
+// =============================================
+
+// ===== العناصر =====
+const messagesEl = document.getElementById('messages');
 const msgInput = document.getElementById('msgInput');
 const sendBtn = document.getElementById('sendBtn');
 const nameInput = document.getElementById('nameInput');
 const nameBtn = document.getElementById('nameBtn');
-const statusDiv = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const statusIcon = document.getElementById('statusIcon');
+const userCountEl = document.getElementById('userCount');
+const usersList = document.getElementById('usersList');
+const toggleUsers = document.getElementById('toggleUsers');
+const usersSidebar = document.getElementById('usersSidebar');
+const tabs = document.querySelectorAll('.tab');
 
+// ===== المتغيرات =====
 let ws = null;
 let myName = 'زائر';
+let users = []; // قائمة المستخدمين المتصلين
+let reconnectAttempts = 0;
 
+// ===== الاتصال بالخادوم =====
 function connect() {
-  ws = new WebSocket('ws://localhost:8080');
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
   
-  ws.onopen = () => { statusDiv.textContent = '🟢 متصل'; statusDiv.style.color = 'rgba(167,139,250,0.7)'; };
+  ws = new WebSocket(`${protocol}//${host}`);
   
-  ws.onmessage = (e) => {
-    try { addMsg(JSON.parse(e.data)); } catch(_) {}
+  ws.onopen = () => {
+    statusIcon.textContent = '✅';
+    statusText.textContent = 'متصل بالإنترنت';
+    statusText.className = 'status-text online';
+    reconnectAttempts = 0;
+    sendBtn.disabled = false;
+    updateUserCount();
+  };
+  
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      handleMessage(data);
+    } catch (e) {
+      console.warn('خطأ:', e);
+    }
   };
   
   ws.onclose = () => {
-    statusDiv.textContent = '🔴 انقطع - إعادة محاولة...';
-    statusDiv.style.color = 'rgba(244,63,94,0.7)';
-    setTimeout(connect, 2000);
+    statusIcon.textContent = '❌';
+    statusText.textContent = 'لا يوجد اتصال بالإنترنت';
+    statusText.className = 'status-text offline';
+    sendBtn.disabled = true;
+    
+    if (reconnectAttempts < 10) {
+      reconnectAttempts++;
+      setTimeout(connect, 2000 * reconnectAttempts);
+    }
   };
   
-  ws.onerror = () => { ws.close(); };
+  ws.onerror = () => {
+    ws.close();
+  };
 }
 
-function addMsg(d) {
+// ===== معالجة الرسائل =====
+function handleMessage(data) {
+  switch (data.type) {
+    case 'system':
+      addMessage(data.text, 'system');
+      break;
+      
+    case 'message':
+      const isSelf = data.name === myName;
+      addMessage(data.text, isSelf ? 'self' : 'other', data.name, data.timestamp);
+      break;
+      
+    case 'users':
+      users = data.users;
+      updateUsersList();
+      updateUserCount();
+      break;
+      
+    case 'history':
+      data.messages.forEach(msg => handleMessage(msg));
+      break;
+      
+    case 'error':
+      addMessage(data.text, 'error');
+      break;
+      
+    default:
+      console.log('رسالة غير معروفة:', data);
+  }
+}
+
+// ===== إضافة رسالة =====
+function addMessage(text, type, sender = null, timestamp = null) {
   const div = document.createElement('div');
   div.className = 'msg';
-  if (d.type === 'system') { div.classList.add('system'); div.textContent = d.text; }
-  else if (d.type === 'message') {
-    div.classList.add(d.name === myName ? 'self' : 'other');
-    const t = d.timestamp ? new Date(d.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-    div.innerHTML = `<span class="name">${d.name}</span>${d.text}<span class="time">${t}</span>`;
+  
+  const time = timestamp 
+    ? new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+    : new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  if (type === 'system') {
+    div.classList.add('msg-system');
+    div.textContent = text;
+  } else if (type === 'error') {
+    div.classList.add('msg-error');
+    div.textContent = text;
+  } else {
+    div.classList.add(type === 'self' ? 'msg-self' : 'msg-other');
+    div.innerHTML = `
+      <span class="sender">${sender || 'مجهول'}</span>
+      ${text}
+      <span class="time">${time}</span>
+    `;
   }
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function sendMsg() {
-  const t = msgInput.value.trim();
-  if (!t) return;
+// ===== إرسال رسالة =====
+function sendMessage() {
+  const text = msgInput.value.trim();
+  if (!text) return;
+  
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'message', text: t }));
+    ws.send(JSON.stringify({ type: 'message', text }));
     msgInput.value = '';
     msgInput.focus();
   }
 }
 
+// ===== تغيير الاسم =====
 function changeName() {
-  const n = nameInput.value.trim();
-  if (n && n !== myName && ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'setName', name: n }));
-    myName = n;
-    statusDiv.textContent = `👤 أنت: ${myName}`;
+  const newName = nameInput.value.trim();
+  if (!newName || newName === myName) return;
+  
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'setName', name: newName }));
+    myName = newName;
     nameInput.value = '';
   }
 }
 
-sendBtn.onclick = sendMsg;
-msgInput.onkeydown = (e) => { if (e.key === 'Enter') sendMsg(); };
-nameBtn.onclick = changeName;
-nameInput.onkeydown = (e) => { if (e.key === 'Enter') changeName(); };
+// ===== تحديث قائمة المستخدمين =====
+function updateUsersList() {
+  usersList.innerHTML = '';
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-item';
+    const dotClass = user.online ? 'online' : 'idle';
+    div.innerHTML = `
+      <span class="user-dot ${dotClass}"></span>
+      ${user.name}
+    `;
+    usersList.appendChild(div);
+  });
+}
 
+// ===== تحديث عدد المستخدمين =====
+function updateUserCount() {
+  userCountEl.textContent = users.length || 0;
+}
+
+// ===== الأحداث =====
+sendBtn.addEventListener('click', sendMessage);
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+nameBtn.addEventListener('click', changeName);
+nameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') changeName();
+});
+
+// ===== فتح/إغلاق قائمة المستخدمين =====
+toggleUsers.addEventListener('click', () => {
+  usersSidebar.classList.toggle('open');
+});
+
+// ===== التبويبات =====
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    
+    // إضافة تفاعل حسب التبويب
+    const tabName = tab.dataset.tab;
+    if (tabName === 'friends') {
+      // فتح قائمة المستخدمين
+      usersSidebar.classList.add('open');
+    } else if (tabName === 'room') {
+      usersSidebar.classList.remove('open');
+    }
+  });
+});
+
+// ===== بدء التشغيل =====
 connect();
+
+// ===== طلب قائمة المستخدمين كل 10 ثوان =====
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'getUsers' }));
+  }
+}, 10000);
+
+// تنبيه: جزء الخادوم يحتاج تحديثاً ليدعم قائمة المستخدمين
+console.log('💬 منصة الدردشة المتكاملة تعمل!');
 </script>
 </body>
 </html>
